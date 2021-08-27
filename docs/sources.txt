@@ -1,0 +1,8 @@
+https://tannerhelland.com/2013/02/11/simple-algorithm-correcting-lens-distortion.html
+https://stackoverflow.com/questions/35410744/fisheye-distortion-correction
+https://web.stanford.edu/~hblasins/Publications/ICME2011.pdf
+https://arxiv.org/pdf/1610.09712.pdf
+https://www.google.com/search?channel=fs&client=ubuntu&q=cordic
+https://www.imatest.com/docs/distortion-methods-and-modules/
+
+
