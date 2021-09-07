@@ -3,10 +3,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity calc_pixel_address is
-    generic (
-        C_INIT_X_FILE : string := "NONE";
-        C_INIT_Y_FILE : string := "NONE"
-    );
     port (
         -- Clock/Reset
         i_aclk    : in std_logic;
@@ -14,17 +10,17 @@ entity calc_pixel_address is
         -- Configure
         i_line_length : in std_logic_vector (15 downto 0);
         -- X/Y pixel location
-        s_src_pos_tdata     : in  std_logic_vector (21 downto 0);
-        s_src_pos_tvalid    : in  std_logic;
-        s_src_pos_tready    : out std_logic;
-        s_src_pos_tuser_sof : in  std_logic;
-        s_src_pos_tlast     : in  std_logic;
+        s_axis_tdata     : in  std_logic_vector (21 downto 0);
+        s_axis_tvalid    : in  std_logic;
+        s_axis_tready    : out std_logic;
+        s_axis_tuser_sof : in  std_logic;
+        s_axis_tlast     : in  std_logic;
         -- Memory address
-        m_mem_addr_tdata     : out std_logic_vector (31 downto 0);
-        m_mem_addr_tvalid    : out std_logic;
-        m_mem_addr_tready    : in  std_logic;
-        m_mem_addr_tuser_sof : out std_logic;
-        m_mem_addr_tlast     : out std_logic
+        m_axis_tdata     : out std_logic_vector (31 downto 0);
+        m_axis_tvalid    : out std_logic;
+        m_axis_tready    : in  std_logic;
+        m_axis_tuser_sof : out std_logic;
+        m_axis_tlast     : out std_logic
     );
 end calc_pixel_address;
 
@@ -39,7 +35,7 @@ architecture rtl of calc_pixel_address is
 	signal w_dsp_b : std_logic_vector (17 downto 0); -- In
 	signal w_dsp_c : std_logic_vector (47 downto 0); -- In
 	--
-	signal w_dsp_p      : std_logic_vector (47 downto 0); -- Out
+	signal w_dsp_p : std_logic_vector (47 downto 0); -- Out
 	--
 
     -- Delay
@@ -51,19 +47,19 @@ begin
 
     -- DSP reset and enable
     w_dsp_reset <= not i_aresetn;
-    w_dsp_cen   <= s_src_pos_tvalid;
+    w_dsp_cen   <= s_axis_tvalid;
     -- DSP Input
-    w_dsp_a <= "000" & x"0000" & s_src_tdata(21 downto 11);
+    w_dsp_a <= "000" & x"0000" & s_axis_tdata(21 downto 11);
     w_dsp_b <= "00" & i_line_length;
-    w_dsp_c <= s_src_tdata(10 downto 0);
+    w_dsp_c <= '0' & x"000000000" & s_axis_tdata(10 downto 0);
 
     -- AXI-Stream out
-    s_src_pos_tready  <= m_mem_addr_tready;
+    s_axis_tready  <= m_axis_tready;
     --
-    m_mem_addr_tdata     <= w_dsp_p(31 donwto 0);
-    m_mem_addr_tvalid    <= r_src_pos_tvalid_d;
-    m_mem_addr_tuser_sof <= r_src_pos_tuser_sof_d;
-    m_mem_addr_tlast     <= r_src_pos_tlast_d;
+    m_axis_tdata     <= w_dsp_p(31 downto 0);
+    m_axis_tvalid    <= r_src_pos_tvalid_d;
+    m_axis_tuser_sof <= r_src_pos_tuser_sof_d;
+    m_axis_tlast     <= r_src_pos_tlast_d;
 
     -- 1cc
     proc_delay: process(i_aclk, i_aresetn)
@@ -73,9 +69,9 @@ begin
             r_src_pos_tuser_sof_d <= '0';
             r_src_pos_tlast_d     <= '0';
         elsif (i_aclk'event and (i_aclk = '1')) then
-            r_src_pos_tvalid_d    <= s_src_pos_tvalid;
-            r_src_pos_tuser_sof_d <= s_src_pos_tuser_sof;
-            r_src_pos_tlast_d     <= s_src_pos_tlast;
+            r_src_pos_tvalid_d    <= s_axis_tvalid;
+            r_src_pos_tuser_sof_d <= s_axis_tuser_sof;
+            r_src_pos_tlast_d     <= s_axis_tlast;
         end if;
     end process;
 
@@ -92,9 +88,9 @@ begin
         USE_SIMD => "ONE48" )		        -- SIMD selection ("ONE48", "TWO24", "FOUR12")
     port map (
         CLK       => i_aclk,            -- 1-bit input: Clock input
-        A         => w_dsp_a,        -- M11
-        B         => w_dsp_b,        -- Gain
-        C         => w_dsp_c,        -- S3_0
+        A         => w_dsp_a,        --
+        B         => w_dsp_b,        --
+        C         => w_dsp_c,        --
         INMODE    => "00000",
         OPMODE    => "0110101",         -- 7-bit input: Operation mode input
         ALUMODE   => "0000",			-- 7-bit input: Operation mode input --

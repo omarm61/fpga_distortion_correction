@@ -30,7 +30,7 @@ def main(argv):
     x = np.array(range(length))
     y = np.zeros(length)
     for i in range(len(x)):
-        y[i] = (math.atan(x[i]) / Rsrc) * 2 ** 16
+        y[i] = (math.atan(x[i]) / Rsrc)
 
     # Create the plot
     plt.plot(x[0:length],y[0:length])

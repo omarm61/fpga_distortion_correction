@@ -18,11 +18,12 @@ architecture tb of tb_fpga is
     -- Image Dimension
     constant C_IMAGE_WIDTH  : integer := 326;
     constant C_IMAGE_HEIGHT : integer := 200;
+    constant C_NUM_PIXELS   : integer := 65200;
 
     -- Files
     -- input
-    constant C_CORR_LUT_X_FILE : string := "corr_lut_x.mif";
-    constant C_CORR_LUT_X_FILE : string := "corr_lut_y.mif";
+    constant C_CORR_LUT_THETA_FILE : string := "NONE";
+    constant C_IMAGE_FILE          : string := "image_in.mif";
     -- output
     constant C_VIDEO_OUT_FILE : string := "video_out_sim.txt";
 
@@ -55,6 +56,9 @@ architecture tb of tb_fpga is
     signal r_lut_addr  : std_logic_vector (10 downto 0);
     signal r_lut_enable: std_logic;
     signal r_lut_wren  : std_logic;
+    -- Configuration
+    signal w_reg_enable_correction : std_logic;
+    signal w_reg_line_length       : std_logic_vector (15 downto 0);
     -- LUT X Configure
     signal w_reg_lut_x_wdata  : std_logic_vector (10 downto 0);
     signal w_reg_lut_x_rdata  : std_logic_vector (10 downto 0);
@@ -69,8 +73,10 @@ architecture tb of tb_fpga is
     signal w_reg_lut_y_wren   : std_logic;
 
     -- Memory Interface
-    signal w_mem_rdata : std_logic_vector (15 downto 0);
-    signal w_mem_addr  : std_logic_vecotr (15 downto 0);
+    signal w_mem_data : std_logic_vector (7 downto 0);
+    signal w_mem_addr  : std_logic_vector (15 downto 0);
+    signal w_mem_rden  : std_logic;
+    signal w_mem_valid : std_logic;
 
     -- Function: Convert CHAR to STD_LOGIC_VECTOR
     function conv_char_to_logic_vector(char0 : character; char1 : character)
@@ -98,38 +104,55 @@ architecture tb of tb_fpga is
     -- Components
     component dist_correction is
         generic (
-            C_IMAGE_WIDTH    : integer := 362;
-            C_IMAGE_HEIGHT   : integer := 200;
-            C_INIT_X_FILE    : string  := "NONE";
-            C_INIT_Y_FILE    : string  := "NONE"
+            C_IMAGE_WIDTH     : integer := 362;
+            C_IMAGE_HEIGHT    : integer := 200;
+            C_INIT_THETA_FILE : string  := "NONE"
         );
         port (
             -- Clock/Reset
-            i_aclk           : in  std_logic;
-            i_aresetn        : in  std_logic;
+            i_aclk             : in  std_logic;
+            i_aresetn          : in  std_logic;
+            -- Configure
+            i_enable_correction: in std_logic;
+            i_line_length      : in std_logic_vector (15 downto 0);
             -- LUT X Configure
-            i_lut_x_wdata    : in  std_logic_vector (10 downto 0);
-            o_lut_x_rdata    : out std_logic_vector (10 downto 0);
-            i_lut_x_addr     : in  std_logic_vector (10 downto 0);
-            i_lut_x_enable   : in  std_logic;
-            i_lut_x_wren     : in  std_logic;
-            -- LUT Y Configure
-            i_lut_y_wdata    : in  std_logic_vector (10 downto 0);
-            o_lut_y_rdata    : out std_logic_vector (10 downto 0);
-            i_lut_y_addr     : in  std_logic_vector (10 downto 0);
-            i_lut_y_enable   : in  std_logic;
-            i_lut_y_wren     : in  std_logic;
+            i_lut_theta_wdata  : in  std_logic_vector (10 downto 0);
+            o_lut_theta_rdata  : out std_logic_vector (10 downto 0);
+            i_lut_theta_addr   : in  std_logic_vector (10 downto 0);
+            i_lut_theta_enable : in  std_logic;
+            i_lut_theta_wren   : in  std_logic;
             -- Memory Interface - Image In
-            i_mem_rdata       : in  std_logic_vector (7 downto 0);
-            o_mem_addr       : out std_logic_vector (15 downto 0);
-            o_mem_rden       : out std_logic;
+            i_mem_rdata        : in  std_logic_vector (7 downto 0);
+            o_mem_addr         : out std_logic_vector (15 downto 0);
+            o_mem_rden         : out std_logic;
+            i_mem_valid        : in  std_logic;
             -- AXI Stream - Image Out corrected
-            m_axis_tdata     : out std_Logic_vector (15 downto 0);
-            m_axis_tvalid    : out std_logic;
-            m_axis_tready    : in  std_Logic;
-            m_axis_tuser_sof : out std_Logic;
-            m_axis_tlast     : out std_logic
+            m_axis_tdata       : out std_Logic_vector (15 downto 0);
+            m_axis_tvalid      : out std_logic;
+            m_axis_tready      : in  std_Logic;
+            m_axis_tuser_sof   : out std_Logic;
+            m_axis_tlast       : out std_logic
         );
+    end component;
+
+    -- ROM Image
+    component image_rom is
+    generic(
+        C_IMAGE_FILE : string  := "NONE";
+        C_NUM_PIXELS : integer := 65200;
+        C_ADDR_WIDTH : integer := 16;
+        C_DATA_WIDTH : integer := 8
+    );
+    port(
+        -- Clock
+        i_aclk     : in std_logic;
+        i_aresetn  : in std_logic;
+        -- Memory interface
+        i_rom_addr : in std_logic_vector(C_ADDR_WIDTH-1 downto 0);
+        o_rom_data : out std_logic_vector(C_DATA_WIDTH-1 downto 0);
+        i_rom_rden : in std_logic;
+        o_rom_valid: out std_logic
+    );
     end component;
 
     -- Edge Enhancements
@@ -209,7 +232,7 @@ begin
                     write(v_oline, conv_std_logic_vector_to_char(w_axis_dist_sim_tdata(15 downto 8)));
                 end if;
                 -- Pixel Counter
-                if (v_pixel_counter = 127) then
+                if (v_pixel_counter = 326) then
                     v_pixel_counter := 0;
                     writeline(write_file, v_oline);
                 else
@@ -224,33 +247,47 @@ begin
         file_close(write_file);
     end process;
 
-
-    dist_correction_u0 : dist_correction
+    image_rom_inst : image_rom
     generic map(
-        C_IMAGE_WIDTH    => C_IMAEG_WIDTH,
-        C_IMAGE_HEIGHT   => C_IAMGE_HEIGHT,
-        C_INIT_X_FILE    => C_CORR_LUT_X_FILE,
-        C_INIT_Y_FILE    => C_CORR_LUT_Y_FILE,
+        C_IMAGE_FILE => C_IMAGE_FILE,
+        C_NUM_PIXELS => C_NUM_PIXELS,
+        C_ADDR_WIDTH => 16,
+        C_DATA_WIDTH => 8
+    ) port map (
+        -- Clock
+        i_aclk     => i_sim_clk,
+        i_aresetn  => i_sim_aresetn,
+        -- Memory interface
+        i_rom_addr  => w_mem_addr,
+        o_rom_data  => w_mem_data,
+        i_rom_rden  => w_mem_rden,
+        o_rom_valid => w_mem_valid
+    );
+
+
+    dist_correction_inst : dist_correction
+    generic map(
+        C_IMAGE_WIDTH     => C_IMAGE_WIDTH,
+        C_IMAGE_HEIGHT    => C_IMAGE_HEIGHT,
+        C_INIT_THETA_FILE => C_CORR_LUT_THETA_FILE
     ) port map (
         -- Clock/Reset
         i_aclk           => i_sim_clk,
         i_aresetn        => i_sim_aresetn,
+        -- Configure
+        i_enable_correction => w_reg_enable_correction,
+        i_line_length       => w_reg_line_length,
         -- LUT X Configure
-        i_lut_x_wdata    => w_reg_lut_x_wdata,
-        o_lut_x_rdata    => w_reg_lut_x_rdata,
-        i_lut_x_addr     => w_reg_lut_x_addr,
-        i_lut_x_enable   => w_reg_lut_x_enable,
-        i_lut_x_wren     => w_reg_lut_x_wren,
-        -- LUT Y Configure
-        i_lut_y_wdata    => w_reg_lut_y_wdata,
-        o_lut_y_rdata    => w_reg_lut_y_rdata,
-        i_lut_y_addr     => w_reg_lut_y_addr,
-        i_lut_y_enable   => w_reg_lut_y_enable,
-        i_lut_y_wren     => w_reg_lut_y_wren,
+        i_lut_theta_wdata    => w_reg_lut_x_wdata,
+        o_lut_theta_rdata    => w_reg_lut_x_rdata,
+        i_lut_theta_addr     => w_reg_lut_x_addr,
+        i_lut_theta_enable   => w_reg_lut_x_enable,
+        i_lut_theta_wren     => w_reg_lut_x_wren,
         -- Memory Interface - Image In
-        i_pxl_data       => w_mem_rdata,
-        o_pxl_addr       => w_mem_addr,
-        o_pxl_rden       => w_mem_rden,
+        i_mem_rdata      => w_mem_data,
+        o_mem_addr       => w_mem_addr,
+        o_mem_rden       => w_mem_rden,
+        i_mem_valid      => w_mem_valid,
         -- AXI Stream - Image Out corrected
         m_axis_tdata     => w_axis_dist_sim_tdata,
         m_axis_tvalid    => w_axis_dist_sim_tvalid,

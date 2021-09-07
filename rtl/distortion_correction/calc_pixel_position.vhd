@@ -7,37 +7,30 @@ use unimacro.VCOMPONENTS.all;
 
 entity calc_pixel_position is
     generic (
-        C_INIT_X_FILE : string := "NONE";
-        C_INIT_Y_FILE : string := "NONE"
+        C_INIT_THETA_FILE : string := "NONE"
     );
     port (
         -- Clock/Reset
         i_aclk    : in std_logic;
         i_aresetn : in std_logic;
-        -- LUT X Configure
-        i_lut_x_wdata      : in  std_logic_vector (10 downto 0);
-        o_lut_x_rdata      : out std_logic_vector (10 downto 0);
-        i_lut_x_addr       : in  std_logic_vector (10 downto 0);
-        i_lut_x_enable     : in  std_logic;
-        i_lut_x_wren       : in  std_logic;
-        -- LUT Y Configure
-        i_lut_y_wdata      : in  std_logic_vector (10 downto 0);
-        o_lut_y_rdata      : out std_logic_vector (10 downto 0);
-        i_lut_y_addr       : in  std_logic_vector (10 downto 0);
-        i_lut_y_enable     : in  std_logic;
-        i_lut_y_wren       : in  std_logic;
+        -- LUT Theta Configure
+        i_lut_theta_wdata   : in  std_logic_vector (10 downto 0);
+        o_lut_theta_rdata   : out std_logic_vector (10 downto 0);
+        i_lut_theta_addr    : in  std_logic_vector (10 downto 0);
+        i_lut_theta_enable  : in  std_logic;
+        i_lut_theta_wren    : in  std_logic;
         -- Destination Positon -- Pixel location in corrected image
-        s_dst_pos_tdata     : in  std_logic_vector (21 downto 0);
-        s_dst_pos_tvalid    : in  std_logic;
-        s_dst_pos_tready    : out std_logic;
-        s_dst_pos_tuser_sof : in  std_logic;
-        s_dst_pos_tlast     : in  std_logic;
+        s_axis_tdata     : in  std_logic_vector (21 downto 0);
+        s_axis_tvalid    : in  std_logic;
+        s_axis_tready    : out std_logic;
+        s_axis_tuser_sof : in  std_logic;
+        s_axis_tlast     : in  std_logic;
         -- Source Position -- Pixel Location in raw image
-        m_src_pos_tdata     : out std_logic_vector (21 downto 0);
-        m_src_pos_tvalid    : out std_logic;
-        m_src_pos_tready    : in  std_logic;
-        m_src_pos_tuser_sof : out std_logic;
-        m_src_pos_tlast     : out std_logic
+        m_axis_tdata     : out std_logic_vector (21 downto 0);
+        m_axis_tvalid    : out std_logic;
+        m_axis_tready    : in  std_logic;
+        m_axis_tuser_sof : out std_logic;
+        m_axis_tlast     : out std_logic
     );
 end calc_pixel_position;
 
@@ -54,8 +47,9 @@ architecture rtl of calc_pixel_position is
     signal r_dst_pos_tlast_d     : std_logic;
 
     --Input position
-    signal w_lut_b_x_addr   : std_logic_vector(15 downto 0);
-    signal w_dst_pos_y_data : std_logic_vector(15 downto 0);
+    signal w_lut_b_x_addr   : std_logic_vector(10 downto 0);
+    signal w_lut_b_y_addr   : std_logic_vector(10 downto 0);
+    signal w_lut_b_valid    : std_logic;
 
     -- DSP48 Stage 1
     --signal w_dsp_s1_ab : std_logic_vector (47 downto 0);
@@ -120,16 +114,16 @@ begin
     w_lut_reset <= not i_aresetn;
 
     --
-    w_lut_b_x_addr  <= s_dst_pos_tdata(10 downto 0);
-    w_lut_b_y_addr  <= s_dst_pos_tdata(21 downto 11);
+    w_lut_b_x_addr  <= s_axis_tdata(10 downto 0);
+    w_lut_b_y_addr  <= s_axis_tdata(21 downto 11);
     w_lut_b_valid   <= s_axis_tvalid;
     s_axis_tready   <= m_axis_tready;
 
     --
-    m_src_pos_tdata     <= w_lut_b_y_data & w_lut_b_x_data;
-    m_src_pos_tvalid    <= r_dst_pos_tvalid_d;
-    m_src_pos_tuser_sof <= r_dst_pos_tuser_sof_d;
-    m_src_pos_tlast     <= r_dst_pos_tlast_d;
+    m_axis_tdata     <= w_lut_b_y_data & w_lut_b_x_data;
+    m_axis_tvalid    <= r_dst_pos_tvalid_d;
+    m_axis_tuser_sof <= r_dst_pos_tuser_sof_d;
+    m_axis_tlast     <= r_dst_pos_tlast_d;
 
     -- 1cc delay
     delay_proc: process(i_aclk, i_aresetn)
@@ -138,10 +132,14 @@ begin
             r_dst_pos_tvalid_d    <= '0';
             r_dst_pos_tuser_sof_d <= '0';
             r_dst_pos_tlast_d     <= '0';
+            w_lut_b_x_data <= (others => '0');
+            w_lut_b_y_data <= (others => '0');
         elsif (i_aclk'event and (i_aclk = '1')) then
-            r_dst_pos_tvalid_d    <= s_dst_pos_tvalid;
-            r_dst_pos_tuser_sof_d <= s_dst_pos_tuser_sof;
-            r_dst_post_tlast_d    <= s_dst_pos_tlast;
+            r_dst_pos_tvalid_d    <= s_axis_tvalid;
+            r_dst_pos_tuser_sof_d <= s_axis_tuser_sof;
+            r_dst_pos_tlast_d    <= s_axis_tlast;
+            w_lut_b_x_data <= w_lut_b_x_addr;
+            w_lut_b_y_data <= w_lut_b_y_addr;
         end if;
     end process;
 
@@ -151,71 +149,71 @@ begin
     -- ru = (ru')^-2
     -- rNorm = ru / i_src_radius
     -- LUT: theta = atan(rNorm) / rNorm
-    BRAM_LUT_x_inst : BRAM_TDP_MACRO
-    generic map (
-        BRAM_SIZE     => "36Kb",
-        DEVICE        => "7SERIES",
-        INIT_FILE     => C_INIT_X_FILE,
-        READ_WIDTH_A  => 16,
-        READ_WIDTH_B  => 16,
-        WRITE_WIDTH_A => 16,
-        WRITE_WIDTH_B => 16
-    ) port map (
-        -- Clock/Reset
-        CLKA => i_aclk,
-        RSTA => w_lut_reset,
-        CLKB => i_aclk,
-        RSTB => w_lut_reset,
-        -- A port - Configuration
-        DIA    => i_lut_x_wdata,
-        DOA    => o_lut_x_rdata,
-        ADDRA  => i_lut_x_addr,
-        REGCEA => '0',
-        ENA    => i_lut_x_enable,
-        WEA    => i_lut_x_wren,
-        -- B port - Video In/Out
-        DIB    => x"00",
-        DOB    => w_lut_b_x_data,
-        ADDRB  => w_lut_b_x_addr,
-        REGCEB => '0',
-        ENB    => w_lut_b_valid,
-        WEB    => "0"
-    );
+    --BRAM_LUT_x_inst : BRAM_TDP_MACRO
+    --generic map (
+    --    BRAM_SIZE     => "36Kb",
+    --    DEVICE        => "7SERIES",
+    --    INIT_FILE     => C_INIT_X_FILE,
+    --    READ_WIDTH_A  => 16,
+    --    READ_WIDTH_B  => 16,
+    --    WRITE_WIDTH_A => 16,
+    --    WRITE_WIDTH_B => 16
+    --) port map (
+    --    -- Clock/Reset
+    --    CLKA => i_aclk,
+    --    RSTA => w_lut_reset,
+    --    CLKB => i_aclk,
+    --    RSTB => w_lut_reset,
+    --    -- A port - Configuration
+    --    DIA    => i_lut_x_wdata,
+    --    DOA    => o_lut_x_rdata,
+    --    ADDRA  => i_lut_x_addr,
+    --    REGCEA => '0',
+    --    ENA    => i_lut_x_enable,
+    --    WEA    => i_lut_x_wren,
+    --    -- B port - Video In/Out
+    --    DIB    => x"00",
+    --    DOB    => w_lut_b_x_data,
+    --    ADDRB  => w_lut_b_x_addr,
+    --    REGCEB => '0',
+    --    ENB    => w_lut_b_valid,
+    --    WEB    => "0"
+    --);
 
     -- LUT Theta
     -- ru = (ru')^-2
     -- rNorm = ru / i_src_radius
     -- LUT: theta = atan(rNorm) / rNorm
-    BRAM_LUT_y_inst : BRAM_TDP_MACRO
-    generic map (
-        BRAM_SIZE     => "36Kb",
-        DEVICE        => "7SERIES",
-        INIT_FILE     => C_INIT_Y_FILE,
-        READ_WIDTH_A  => 16,
-        READ_WIDTH_B  => 16,
-        WRITE_WIDTH_A => 16,
-        WRITE_WIDTH_B => 16
-    ) port map (
-        -- Clock/Reset
-        CLKA => i_aclk,
-        RSTA => w_lut_reset,
-        CLKB => i_aclk,
-        RSTB => w_lut_reset,
-        -- A port - Configuration
-        DIA    => i_lut_y_wdata,
-        DOA    => o_lut_y_rdata,
-        ADDRA  => i_lut_y_addr,
-        REGCEA => '0',
-        ENA    => i_lut_y_enable,
-        WEA    => i_lut_y_wren,
-        -- B port - Video In/Out
-        DIB    => x"00",
-        DOB    => w_lut_b_y_data,
-        ADDRB  => w_lut_b_y_addr,
-        REGCEB => '0',
-        ENB    => w_lut_b_valid,
-        WEB    => "0"
-    );
+    --BRAM_LUT_y_inst : BRAM_TDP_MACRO
+    --generic map (
+    --    BRAM_SIZE     => "36Kb",
+    --    DEVICE        => "7SERIES",
+    --    INIT_FILE     => C_INIT_Y_FILE,
+    --    READ_WIDTH_A  => 16,
+    --    READ_WIDTH_B  => 16,
+    --    WRITE_WIDTH_A => 16,
+    --    WRITE_WIDTH_B => 16
+    --) port map (
+    --    -- Clock/Reset
+    --    CLKA => i_aclk,
+    --    RSTA => w_lut_reset,
+    --    CLKB => i_aclk,
+    --    RSTB => w_lut_reset,
+    --    -- A port - Configuration
+    --    DIA    => i_lut_y_wdata,
+    --    DOA    => o_lut_y_rdata,
+    --    ADDRA  => i_lut_y_addr,
+    --    REGCEA => '0',
+    --    ENA    => i_lut_y_enable,
+    --    WEA    => i_lut_y_wren,
+    --    -- B port - Video In/Out
+    --    DIB    => x"00",
+    --    DOB    => w_lut_b_y_data,
+    --    ADDRB  => w_lut_b_y_addr,
+    --    REGCEB => '0',
+    --    ENB    => w_lut_b_valid,
+    --    WEB    => "0"
+    --);
 
 
 end rtl;

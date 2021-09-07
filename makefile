@@ -9,12 +9,13 @@ IMAGE_IN_JPEG="../pictures/checkerboard_326x200.jpg"
 IMAGE_IN_MIF="image_in.mif"
 
 # RTL directories
-INCLUDE_RTL= ../rtl/dist_correction.vhd \
-			 ../rtl/calc_pixel_position.vhd\
-			 ../rtl/calc_pixel_address.vhd
+INCLUDE_RTL= ../rtl/distortion_correction/dsp48_wrap.vhd \
+			 ../rtl/distortion_correction/calc_pixel_position.vhd \
+			 ../rtl/distortion_correction/calc_pixel_address.vhd \
+			 ../rtl/distortion_correction/dist_correction.vhd
 
 # TB direcotry
-INCLUDE_TB= ../tb/iamge_rom.vhd \
+INCLUDE_TB= ../tb/image_rom.vhd \
 			../tb/tb_fpga.vhd
 
 # Xilinx compiled lib directory
@@ -94,7 +95,7 @@ conv :
 ## play: play the generated video
 play : conv
 	cd $(SIM_DIR); \
-	ffplay -f rawvideo -pixel_format yuyv422  -video_size 326x200 video_out.yuv
+	ffplay -f rawvideo -pixel_format yuyv422  -video_size 326x199 video_out.yuv
 
 ## clean: remove all generated files in /sim directory
 clean :
