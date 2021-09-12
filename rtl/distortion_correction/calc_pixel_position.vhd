@@ -43,7 +43,7 @@ architecture rtl of calc_pixel_position is
     signal w_dsp_reset : std_logic;
     signal w_lut_reset : std_logic;
     --
-    constant C_AXIS_LATENCY : integer := 5; -- 5cc
+    constant C_AXIS_LATENCY : integer := 6; -- 5cc
     signal rs_axis_tvalid_shift    : std_logic_vector(C_AXIS_LATENCY-1 downto 0);
     signal rs_axis_tuser_sof_shift : std_logic_vector(C_AXIS_LATENCY-1 downto 0);
     signal rs_axis_tlast_shift     : std_logic_vector(C_AXIS_LATENCY-1 downto 0);
@@ -55,8 +55,8 @@ architecture rtl of calc_pixel_position is
 
     signal r_pos_x_sign       : std_logic;
     signal r_pos_y_sign       : std_logic;
-    signal r_pos_x_sign_shift : std_logic_vector (2 downto 0);
-    signal r_pos_y_sign_shift : std_logic_vector (2 downto 0);
+    signal r_pos_x_sign_shift : std_logic_vector (3 downto 0);
+    signal r_pos_y_sign_shift : std_logic_vector (3 downto 0);
 
     -- DSP48 Stage 1
     signal r_dsp_s1_ab : std_logic_vector (47 downto 0);
@@ -71,44 +71,61 @@ architecture rtl of calc_pixel_position is
     ----
     --signal w_dsp_s1_carryout : std_logic_vector (3 downto 0);
 
-    ---- DSP48 Stage 2
-    signal w_dsp_s2_ab : std_logic_vector (47 downto 0);
-    alias  w_dsp_s2_a  : std_logic_vector (29 downto 0) is w_dsp_s2_ab (47 downto 18);
-    alias  w_dsp_s2_b  : std_logic_vector (17 downto 0) is w_dsp_s2_ab (17 downto 0);
-    ----
-    signal w_dsp_s2_c  : std_logic_vector (47 downto 0);
-    ----
-    signal w_dsp_s2_p  : std_logic_vector (47 downto 0); -- ru
-
-	-- Stage 3 - Mutliplication and subtraction - P = C + (B*A)
-	signal w_dsp_s3_x_a : std_logic_vector (29 downto 0); -- In
-	signal w_dsp_s3_x_b : std_logic_vector (17 downto 0); -- In
-	signal w_dsp_s3_x_c : std_logic_vector (47 downto 0); -- In
+	-- Stage 2 - calculate newX^2
+	signal w_dsp_s2_x_a : std_logic_vector (29 downto 0); -- In
+	signal w_dsp_s2_x_b : std_logic_vector (17 downto 0); -- In
+	signal w_dsp_s2_x_c : std_logic_vector (47 downto 0); -- In
 	--
-	signal w_dsp_s3_x_p : std_logic_vector (47 downto 0); -- Out
-    --
-    signal w_dsp_s3_x_alumode : std_logic_vector (3 downto 0);
-    signal w_dsp_s3_x_carryin : std_logic;
+	signal w_dsp_s2_x_p : std_logic_vector (47 downto 0); -- Out
 
-	-- Stage 3 - Mutliplication and subtraction - P = C + (B*A)
-	signal w_dsp_s3_y_a : std_logic_vector (29 downto 0); -- In
-	signal w_dsp_s3_y_b : std_logic_vector (17 downto 0); -- In
-	signal w_dsp_s3_y_c : std_logic_vector (47 downto 0); -- In
+	-- Stage 2 - calculate newY^2
+	signal w_dsp_s2_y_a : std_logic_vector (29 downto 0); -- In
+	signal w_dsp_s2_y_b : std_logic_vector (17 downto 0); -- In
+	signal w_dsp_s2_y_c : std_logic_vector (47 downto 0); -- In
 	--
-	signal w_dsp_s3_y_p : std_logic_vector (47 downto 0); -- Out
+	signal w_dsp_s2_y_p : std_logic_vector (47 downto 0); -- Out
+
+
+    ---- DSP48 Stage 3
+    signal w_dsp_s3_ab : std_logic_vector (47 downto 0);
+    alias  w_dsp_s3_a  : std_logic_vector (29 downto 0) is w_dsp_s3_ab (47 downto 18);
+    alias  w_dsp_s3_b  : std_logic_vector (17 downto 0) is w_dsp_s3_ab (17 downto 0);
+    ----
+    signal w_dsp_s3_c  : std_logic_vector (47 downto 0);
+    ----
+    signal w_dsp_s3_p  : std_logic_vector (47 downto 0); -- ru
+
+	-- Stage 4 - Mutliplication and subtraction - P = C + (B*A)
+	signal w_dsp_s4_x_a : std_logic_vector (29 downto 0); -- In
+	signal w_dsp_s4_x_b : std_logic_vector (17 downto 0); -- In
+	signal w_dsp_s4_x_c : std_logic_vector (47 downto 0); -- In
+	--
+	signal w_dsp_s4_x_p : std_logic_vector (47 downto 0); -- Out
     --
-    signal w_dsp_s3_y_alumode : std_logic_vector (3 downto 0);
-    signal w_dsp_s3_y_carryin : std_logic;
+    signal w_dsp_s4_x_alumode : std_logic_vector (3 downto 0);
+    signal w_dsp_s4_x_carryin : std_logic;
+
+	-- Stage 4 - Mutliplication and subtraction - P = C + (B*A)
+	signal w_dsp_s4_y_a : std_logic_vector (29 downto 0); -- In
+	signal w_dsp_s4_y_b : std_logic_vector (17 downto 0); -- In
+	signal w_dsp_s4_y_c : std_logic_vector (47 downto 0); -- In
+	--
+	signal w_dsp_s4_y_p : std_logic_vector (47 downto 0); -- Out
+    --
+    signal w_dsp_s4_y_alumode : std_logic_vector (3 downto 0);
+    signal w_dsp_s4_y_carryin : std_logic;
     --
     signal w_calc_pos_x : std_logic_vector (10 downto 0);
     signal w_calc_pos_y : std_logic_vector (10 downto 0);
 
 	--
-    signal r_dsp_s1_p_newx_d  : std_logic_vector (23 downto 0);
-    signal r_dsp_s1_p_newx_dd : std_logic_vector (23 downto 0);
+    signal r_dsp_s1_p_newx_d   : std_logic_vector (23 downto 0);
+    signal r_dsp_s1_p_newx_dd  : std_logic_vector (23 downto 0);
+    signal r_dsp_s1_p_newx_ddd : std_logic_vector (23 downto 0);
 	--
-    signal r_dsp_s1_p_newy_d  : std_logic_vector (23 downto 0);
-    signal r_dsp_s1_p_newy_dd : std_logic_vector (23 downto 0);
+    signal r_dsp_s1_p_newy_d   : std_logic_vector (23 downto 0);
+    signal r_dsp_s1_p_newy_dd  : std_logic_vector (23 downto 0);
+    signal r_dsp_s1_p_newy_ddd : std_logic_vector (23 downto 0);
 
 	-- BRAM LUT
     component BRAM_TDP_MACRO is
@@ -154,8 +171,8 @@ begin
     --
     s_axis_tready   <= m_axis_tready;
     --
-    w_calc_pos_x <= "000" & x"00" when w_dsp_s3_x_p(37) = '1' else w_dsp_s3_x_p(25 downto 15);
-    w_calc_pos_y <= "000" & x"00" when w_dsp_s3_y_p(37) = '1' else w_dsp_s3_y_p(25 downto 15);
+    w_calc_pos_x <= "000" & x"00" when w_dsp_s4_x_p(37) = '1' else w_dsp_s4_x_p(25 downto 15);
+    w_calc_pos_y <= "000" & x"00" when w_dsp_s4_y_p(37) = '1' else w_dsp_s4_y_p(25 downto 15);
     m_axis_tdata     <= w_calc_pos_y & w_calc_pos_x;
     m_axis_tvalid    <= rs_axis_tvalid_shift(C_AXIS_LATENCY-1);
     m_axis_tuser_sof <= rs_axis_tuser_sof_shift(C_AXIS_LATENCY-1);
@@ -187,8 +204,8 @@ begin
             r_pos_y_sign_shift <= (others => '0');
         elsif (i_aclk'event and (i_aclk = '1')) then
             -- Shift the measurement sign for stage 3 of the calculation
-            r_pos_x_sign_shift <= r_pos_x_sign_shift(1 downto 0) & r_pos_x_sign;
-            r_pos_y_sign_shift <= r_pos_y_sign_shift(1 downto 0) & r_pos_y_sign;
+            r_pos_x_sign_shift <= r_pos_x_sign_shift(2 downto 0) & r_pos_x_sign;
+            r_pos_y_sign_shift <= r_pos_y_sign_shift(2 downto 0) & r_pos_y_sign;
             -- Subtract larger number from smaller number to ensure a positive  output
             if (s_axis_tvalid = '1') then
                 -- newX
@@ -219,10 +236,12 @@ begin
     newxy_delay_proc: process(i_aclk, i_aresetn)
     begin
         if(i_aresetn = '0') then
-            r_dsp_s1_p_newx_d <= (others => '0');
-            r_dsp_s1_p_newx_dd <= (others => '0');
-            r_dsp_s1_p_newy_d <= (others => '0');
-            r_dsp_s1_p_newy_dd <= (others => '0');
+            r_dsp_s1_p_newx_d   <= (others => '0');
+            r_dsp_s1_p_newx_dd  <= (others => '0');
+            r_dsp_s1_p_newx_ddd <= (others => '0');
+            r_dsp_s1_p_newy_d   <= (others => '0');
+            r_dsp_s1_p_newy_dd  <= (others => '0');
+            r_dsp_s1_p_newy_ddd <= (others => '0');
         elsif (i_aclk'event and (i_aclk = '1')) then
             -- Check for overflow X
             if (w_dsp_s1_p_newx(23) = '0') then
@@ -230,7 +249,8 @@ begin
             else
                 r_dsp_s1_p_newx_d  <= (others => '0');
             end if;
-            r_dsp_s1_p_newx_dd <= r_dsp_s1_p_newx_d;
+            r_dsp_s1_p_newx_dd  <= r_dsp_s1_p_newx_d;
+            r_dsp_s1_p_newx_ddd <= r_dsp_s1_p_newx_dd;
             --
             --
             -- Check for overflow Y
@@ -240,6 +260,7 @@ begin
                 r_dsp_s1_p_newy_d  <= (others => '0');
             end if;
             r_dsp_s1_p_newy_dd <= r_dsp_s1_p_newy_d;
+            r_dsp_s1_p_newy_ddd <= r_dsp_s1_p_newy_dd;
         end if;
     end process;
 
@@ -273,14 +294,103 @@ begin
         P => w_dsp_s1_p,    -- 48-bit output: Primary data output
         CARRYOUT => open );	-- 4-bit carry output
 
+    -- newX^2 = newX * newX
+    w_dsp_s2_x_a <= "000000" & w_dsp_s1_p_newx;
+    w_dsp_s2_x_b <= w_dsp_s1_p_newx(17 downto 0);
+    w_dsp_s2_x_c <= x"000000000000";
+
+    DSP48E1_stage2_x_inst : entity work.dsp48_wrap
+	generic map (
+	    PREG => 1,				        -- Pipeline stages for P (0 or 1)
+	    USE_MULT => "MULTIPLY",
+	    USE_DPORT => TRUE,
+	    MASK => x"000000000000",		    -- 48-bit mask value for pattern detect
+	    SEL_PATTERN => "PATTERN",			-- Select pattern value ("PATTERN" or "C")
+	    USE_PATTERN_DETECT => "NO_PATDET",	-- ("PATDET" or "NO_PATDET")
+	    USE_SIMD => "ONE48" )		        -- SIMD selection ("ONE48", "TWO24", "FOUR12")
+	port map (
+	    CLK       => i_aclk,            -- 1-bit input: Clock input
+	    A         => w_dsp_s2_x_a,        -- newX
+	    B         => w_dsp_s2_x_b,        -- newX
+	    C         => w_dsp_s2_x_c,        -- 0
+	    INMODE    => "00000",
+	    OPMODE    => "0110101",          -- 7-bit input: Operation mode input
+	    ALUMODE   => "0000", -- 7-bit input: Operation mode input
+	    CARRYIN   => '0', -- 1-bit input: Carry input signal
+	    CEC       => rs_axis_tvalid_shift(1),
+	    CECARRYIN => rs_axis_tvalid_shift(1),
+	    CECTRL    => rs_axis_tvalid_shift(1),
+		CEM		  => rs_axis_tvalid_shift(1),  -- 1-bit input: CE input for Multiplier
+	    CEP       => rs_axis_tvalid_shift(1),  -- 1-bit input: CE input for PREG
+	    CEA1      => rs_axis_tvalid_shift(1),
+	    -- Reset Signals
+		RSTA          => w_dsp_reset,
+		RSTB          => w_dsp_reset,
+		RSTC          => w_dsp_reset,
+		RSTD          => w_dsp_reset,
+		RSTM          => w_dsp_reset,
+		RSTP          => w_dsp_reset,
+		RSTINMODE     => w_dsp_reset,
+		RSTALUMODE    => w_dsp_reset,
+		RSTCTRL       => w_dsp_reset,
+		RSTALLCARRYIN => w_dsp_reset,
+	    --
+	    PATTERNDETECT => open,		  -- Match indicator P[47:0] with pattern
+	    P             => w_dsp_s2_x_p); -- 48-bit output: Primary data output
+
+    -- newY^2 = newY * newY
+    w_dsp_s2_y_a <= "000000" & w_dsp_s1_p_newy;
+    w_dsp_s2_y_b <= w_dsp_s1_p_newy(17 downto 0);
+    w_dsp_s2_y_c <= x"000000000000";
+
+    DSP48E1_stage2_y_inst : entity work.dsp48_wrap
+	generic map (
+	    PREG => 1,				        -- Pipeline stages for P (0 or 1)
+	    USE_MULT => "MULTIPLY",
+	    USE_DPORT => TRUE,
+	    MASK => x"000000000000",		    -- 48-bit mask value for pattern detect
+	    SEL_PATTERN => "PATTERN",			-- Select pattern value ("PATTERN" or "C")
+	    USE_PATTERN_DETECT => "NO_PATDET",	-- ("PATDET" or "NO_PATDET")
+	    USE_SIMD => "ONE48" )		        -- SIMD selection ("ONE48", "TWO24", "FOUR12")
+	port map (
+	    CLK       => i_aclk,            -- 1-bit input: Clock input
+	    A         => w_dsp_s2_y_a,        -- newY
+	    B         => w_dsp_s2_y_b,        -- newY
+	    C         => w_dsp_s2_y_c,        -- 0
+	    INMODE    => "00000",
+	    OPMODE    => "0110101",          -- 7-bit input: Operation mode input
+	    ALUMODE   => "0000", -- 7-bit input: Operation mode input
+	    CARRYIN   => '0', -- 1-bit input: Carry input signal
+	    CEC       => rs_axis_tvalid_shift(1),
+	    CECARRYIN => rs_axis_tvalid_shift(1),
+	    CECTRL    => rs_axis_tvalid_shift(1),
+		CEM		  => rs_axis_tvalid_shift(1),  -- 1-bit input: CE input for Multiplier
+	    CEP       => rs_axis_tvalid_shift(1),  -- 1-bit input: CE input for PREG
+	    CEA1      => rs_axis_tvalid_shift(1),
+	    -- Reset Signals
+		RSTA          => w_dsp_reset,
+		RSTB          => w_dsp_reset,
+		RSTC          => w_dsp_reset,
+		RSTD          => w_dsp_reset,
+		RSTM          => w_dsp_reset,
+		RSTP          => w_dsp_reset,
+		RSTINMODE     => w_dsp_reset,
+		RSTALUMODE    => w_dsp_reset,
+		RSTCTRL       => w_dsp_reset,
+		RSTALLCARRYIN => w_dsp_reset,
+	    --
+	    PATTERNDETECT => open,		  -- Match indicator P[47:0] with pattern
+	    P             => w_dsp_s2_y_p); -- 48-bit output: Primary data output
+
+
     -- P = A:B + C
     -- P[47:0] = sum = newX + newY
     -- Stage three wires
-    w_dsp_s2_ab <= x"000000" & w_dsp_s1_p_newx;
-    w_dsp_s2_c  <= x"000000" & w_dsp_s1_p_newy;
+    w_dsp_s3_ab <= x"000000" & w_dsp_s2_x_p(23 downto 0);
+    w_dsp_s3_c  <= x"000000" & w_dsp_s2_y_p(23 downto 0);
 
     -- Stage three - Addition
-    DSP48E1_stage2_inst : entity work.dsp48_wrap
+    DSP48E1_stage3_inst : entity work.dsp48_wrap
     generic map (
         PREG => 1,				-- Pipeline stages for P (0 or 1)
         MASK => x"000000000000",		-- 48-bit mask value for pattern detect
@@ -289,13 +399,13 @@ begin
         USE_SIMD => "ONE48" )		-- SIMD selection ("ONE48", "TWO24", "FOUR12")
     port map (
         CLK     => i_aclk,		      -- 1-bit input: Clock input
-        A       => w_dsp_s2_a,		  -- newX
-        B       => w_dsp_s2_b,	  	  -- 0
-        C       => w_dsp_s2_c,		  -- newY
+        A       => w_dsp_s3_a,		  -- newX
+        B       => w_dsp_s3_b,	  	  -- 0
+        C       => w_dsp_s3_c,		  -- newY
         OPMODE  => "0110011",			  -- 7-bit input: Operation mode input
         ALUMODE => "0000",	      -- 7-bit input: Operation mode input
         CARRYIN => '0',			      -- 1-bit input: Carry input signal
-        CEP     => rs_axis_tvalid_shift(1),	      -- 1-bit input: CE input for PREG
+        CEP     => rs_axis_tvalid_shift(2),	      -- 1-bit input: CE input for PREG
         -- Reset Signals
         RSTA          => w_dsp_reset,
         RSTB          => w_dsp_reset,
@@ -307,7 +417,7 @@ begin
         RSTALUMODE    => w_dsp_reset,
         RSTCTRL       => w_dsp_reset,
         --
-        P => w_dsp_s2_p );			-- 48-bit output: Primary data output
+        P => w_dsp_s3_p );			-- 48-bit output: Primary data output
 
 -- LUT Theta
 -- ru = (ru')^-2
@@ -338,9 +448,9 @@ begin
         -- B port - Video In/Out
         DIB    => x"0000",
         DOB    => w_lut_b_theta_data,
-        ADDRB  => w_dsp_s2_p(10 downto 0),
+        ADDRB  => w_dsp_s3_p(15 downto 5),
         REGCEB => '0',
-        ENB    => rs_axis_tvalid_shift(2),
+        ENB    => rs_axis_tvalid_shift(3),
         WEB    => "00"
     );
 
@@ -348,15 +458,15 @@ begin
     -- center_x + theta*newX
 	-- Stage four - Multiplication, Subtraction = (Gain * Center pixel) - neighbouring pixels
     -- P[47:0] = center_x + (theta * newX)
-	w_dsp_s3_x_a <= x"0" & "00" & r_dsp_s1_p_newx_dd;
-	w_dsp_s3_x_b <= "00" & w_lut_b_theta_data;
+	w_dsp_s4_x_a <= x"0" & "00" & r_dsp_s1_p_newx_ddd;
+	w_dsp_s4_x_b <= "00" & w_lut_b_theta_data;
 	--w_dsp_s3_x_b <= "00" & x"8000";
-	w_dsp_s3_x_c <= x"00000" & "00" & i_center_x & x"000" & "000"; -- Two's compliment, sum of neighbouring pixels
+	w_dsp_s4_x_c <= x"00000" & "00" & i_center_x & x"000" & "000"; -- Two's compliment, sum of neighbouring pixels
 
-    w_dsp_s3_x_alumode <= "0011" when r_pos_x_sign_shift(2) = '1' else "0000";
-    w_dsp_s3_x_carryin <=    '1' when r_pos_x_sign_shift(2) = '1' else '0';
+    w_dsp_s4_x_alumode <= "0011" when r_pos_x_sign_shift(3) = '1' else "0000";
+    w_dsp_s4_x_carryin <=    '1' when r_pos_x_sign_shift(3) = '1' else '0';
 
-    DSP48E1_stage3_x_inst : entity work.dsp48_wrap
+    DSP48E1_stage4_x_inst : entity work.dsp48_wrap
 	generic map (
 	    PREG => 1,				        -- Pipeline stages for P (0 or 1)
 	    USE_MULT => "MULTIPLY",
@@ -367,19 +477,19 @@ begin
 	    USE_SIMD => "ONE48" )		        -- SIMD selection ("ONE48", "TWO24", "FOUR12")
 	port map (
 	    CLK       => i_aclk,            -- 1-bit input: Clock input
-	    A         => w_dsp_s3_x_a,        -- newX
-	    B         => w_dsp_s3_x_b,        -- theta
-	    C         => w_dsp_s3_x_c,        -- i_center_x
+	    A         => w_dsp_s4_x_a,        -- newX
+	    B         => w_dsp_s4_x_b,        -- theta
+	    C         => w_dsp_s4_x_c,        -- i_center_x
 	    INMODE    => "00000",
 	    OPMODE    => "0110101",          -- 7-bit input: Operation mode input
-	    ALUMODE   => w_dsp_s3_x_alumode, -- 7-bit input: Operation mode input
-	    CARRYIN   => w_dsp_s3_x_carryin, -- 1-bit input: Carry input signal
-	    CEC       => rs_axis_tvalid_shift(3),
-	    CECARRYIN => rs_axis_tvalid_shift(3),
-	    CECTRL    => rs_axis_tvalid_shift(3),
-		CEM		  => rs_axis_tvalid_shift(3),  -- 1-bit input: CE input for Multiplier
-	    CEP       => rs_axis_tvalid_shift(3),  -- 1-bit input: CE input for PREG
-	    CEA1      => rs_axis_tvalid_shift(3),
+	    ALUMODE   => w_dsp_s4_x_alumode, -- 7-bit input: Operation mode input
+	    CARRYIN   => w_dsp_s4_x_carryin, -- 1-bit input: Carry input signal
+	    CEC       => rs_axis_tvalid_shift(4),
+	    CECARRYIN => rs_axis_tvalid_shift(4),
+	    CECTRL    => rs_axis_tvalid_shift(4),
+		CEM		  => rs_axis_tvalid_shift(4),  -- 1-bit input: CE input for Multiplier
+	    CEP       => rs_axis_tvalid_shift(4),  -- 1-bit input: CE input for PREG
+	    CEA1      => rs_axis_tvalid_shift(4),
 	    -- Reset Signals
 		RSTA          => w_dsp_reset,
 		RSTB          => w_dsp_reset,
@@ -393,19 +503,19 @@ begin
 		RSTALLCARRYIN => w_dsp_reset,
 	    --
 	    PATTERNDETECT => open,		  -- Match indicator P[47:0] with pattern
-	    P             => w_dsp_s3_x_p); -- 48-bit output: Primary data output
+	    P             => w_dsp_s4_x_p); -- 48-bit output: Primary data output
 
     -- center_y + theta*newY
     -- P[47:0] = center_y + (theta * newY)
-	w_dsp_s3_y_a <= x"0" & "00" & r_dsp_s1_p_newy_dd;
-	w_dsp_s3_y_b <= "00" & w_lut_b_theta_data;
+	w_dsp_s4_y_a <= x"0" & "00" & r_dsp_s1_p_newy_ddd;
+	w_dsp_s4_y_b <= "00" & w_lut_b_theta_data;
 	--w_dsp_s3_y_b <= "00" & x"8000";
-	w_dsp_s3_y_c <= x"00000" & "00" & i_center_y & x"000" & "000"; -- Two's compliment, sum of neighbouring pixels
+	w_dsp_s4_y_c <= x"00000" & "00" & i_center_y & x"000" & "000"; -- Two's compliment, sum of neighbouring pixels
 
-    w_dsp_s3_y_alumode <= "0011" when r_pos_y_sign_shift(2) = '1' else "0000";
-    w_dsp_s3_y_carryin <=    '1' when r_pos_y_sign_shift(2) = '1' else '0';
+    w_dsp_s4_y_alumode <= "0011" when r_pos_y_sign_shift(2) = '1' else "0000";
+    w_dsp_s4_y_carryin <=    '1' when r_pos_y_sign_shift(2) = '1' else '0';
 
-    DSP48E1_stage3_y_inst : entity work.dsp48_wrap
+    DSP48E1_stage4_y_inst : entity work.dsp48_wrap
 	generic map (
 	    PREG => 1,				        -- Pipeline stages for P (0 or 1)
 	    USE_MULT => "MULTIPLY",
@@ -416,19 +526,19 @@ begin
 	    USE_SIMD => "ONE48" )		        -- SIMD selection ("ONE48", "TWO24", "FOUR12")
 	port map (
 	    CLK       => i_aclk,              -- 1-bit input: Clock input
-	    A         => w_dsp_s3_y_a,        -- M11
-	    B         => w_dsp_s3_y_b,        -- Gain
-	    C         => w_dsp_s3_y_c,        -- S3_0
+	    A         => w_dsp_s4_y_a,        -- M11
+	    B         => w_dsp_s4_y_b,        -- Gain
+	    C         => w_dsp_s4_y_c,        -- S3_0
 	    INMODE    => "00000",
 	    OPMODE    => "0110101",          -- 7-bit input: Operation mode input
-	    ALUMODE   => w_dsp_s3_y_alumode, -- 7-bit input: Operation mode input
-	    CARRYIN   => w_dsp_s3_y_carryin, -- 1-bit input: Carry input signal
-	    CEC       => rs_axis_tvalid_shift(3),
-	    CECARRYIN => rs_axis_tvalid_shift(3),
-	    CECTRL    => rs_axis_tvalid_shift(3),
-		CEM		  => rs_axis_tvalid_shift(3),  -- 1-bit input: CE input for Multiplier
-	    CEP       => rs_axis_tvalid_shift(3),  -- 1-bit input: CE input for PREG
-	    CEA1      => rs_axis_tvalid_shift(3),
+	    ALUMODE   => w_dsp_s4_y_alumode, -- 7-bit input: Operation mode input
+	    CARRYIN   => w_dsp_s4_y_carryin, -- 1-bit input: Carry input signal
+	    CEC       => rs_axis_tvalid_shift(4),
+	    CECARRYIN => rs_axis_tvalid_shift(4),
+	    CECTRL    => rs_axis_tvalid_shift(4),
+		CEM		  => rs_axis_tvalid_shift(4),  -- 1-bit input: CE input for Multiplier
+	    CEP       => rs_axis_tvalid_shift(4),  -- 1-bit input: CE input for PREG
+	    CEA1      => rs_axis_tvalid_shift(4),
 	    -- Reset Signals
 		RSTA          => w_dsp_reset,
 		RSTB          => w_dsp_reset,
@@ -442,6 +552,6 @@ begin
 		RSTALLCARRYIN => w_dsp_reset,
 	    --
 	    PATTERNDETECT => open,		  -- Match indicator P[47:0] with pattern
-	    P             => w_dsp_s3_y_p); -- 48-bit output: Primary data output
+	    P             => w_dsp_s4_y_p); -- 48-bit output: Primary data output
 
 end rtl;

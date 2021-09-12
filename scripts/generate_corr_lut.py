@@ -51,12 +51,7 @@ def main(argv):
     newx = 0
     newy = 0
     for i in range(len(pos)):
-        if (newx == width/2):
-            if (newy != height/2):
-                newy = newy + 1
-        else:
-            newx = newx + 1
-        ru = math.sqrt((newx ** 2) + (newy ** 2))
+        ru = math.sqrt(i*(2 ** 5))
         rnorm = ru/rd
         if (rnorm == 0.0):
             theta = 1

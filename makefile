@@ -7,6 +7,9 @@ C_MODEL_DIR="c_model"
 # Input Image
 IMAGE_IN_JPEG="../pictures/checkerboard_326x200.jpg"
 IMAGE_IN_MIF="image_in.mif"
+CORR_LUT_MIF="corr_lut.mif"
+
+GAIN=1.7
 
 # RTL directories
 INCLUDE_RTL= ../rtl/distortion_correction/dsp48_wrap.vhd \
@@ -68,7 +71,7 @@ compile :
 	vcom $(INCLUDE_RTL) $(INCLUDE_TB)
 
 ## sim: run simulation
-sim : compile
+sim : compile stim
 	@cd $(SIM_DIR); \
 	vsim $(VSIM_OPT) tb_fpga
 
@@ -80,7 +83,8 @@ waves :
 ## stim: generate stimulus input video file
 stim :
 	@cd $(SCRIPT_DIR); \
-	python3 generate_image_rom.py -i $(IMAGE_IN_JPEG) -o ../$(SIM_DIR)/$(IMAGE_IN_MIF)
+	python3 generate_image_rom.py -i $(IMAGE_IN_JPEG) -o ../$(SIM_DIR)/$(IMAGE_IN_MIF); \
+	python3 generate_corr_lut.py -w 326 -l 200 -s $(GAIN) -o ../$(SIM_DIR)/$(CORR_LUT_MIF)
 
 plot_lut :
 	@cd $(SCRIPT_DIR); \
