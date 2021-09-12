@@ -4,7 +4,7 @@ import matplotlib.image as mpimg
 import sys, getopt
 
 def help():
-    print ('generate_image_rom.py -i <InputFile> -o <OutputFile>')
+    print ('generate_image_rom.py -a <InputFile> -b <OutputFile> -d')
     print ('-v : verbose')
     print ('-d : display image')
 
@@ -20,7 +20,7 @@ def main(argv):
 
     # Check for input arguments
     try:
-        opts, args = getopt.getopt(argv, "hvdi:", ["input="])
+        opts, args = getopt.getopt(argv, "hda:b:", ["input="])
     except getopt.GetoptError:
         help()
         sys.exit(2)

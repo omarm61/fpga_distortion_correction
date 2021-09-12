@@ -1,0 +1,12 @@
+# Ignore everything in sim file
+sim/*
+
+# Except the following:
+sim/myfile
+sim/stim.do
+
+# c_model build files
+c_model/Makefile
+c_model/CMakeCache.txt
+c_model/CMakeFiles/
+c_model/cmake_install.cmake

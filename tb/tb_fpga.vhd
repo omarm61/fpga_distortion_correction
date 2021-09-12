@@ -22,7 +22,7 @@ architecture tb of tb_fpga is
 
     -- Files
     -- input
-    constant C_CORR_LUT_THETA_FILE : string := "NONE";
+    constant C_CORR_LUT_THETA_FILE : string := "corr_lut.mif";
     constant C_IMAGE_FILE          : string := "image_in.mif";
     -- output
     constant C_VIDEO_OUT_FILE : string := "video_out_sim.txt";
@@ -59,9 +59,11 @@ architecture tb of tb_fpga is
     -- Configuration
     signal w_reg_enable_correction : std_logic;
     signal w_reg_line_length       : std_logic_vector (15 downto 0);
+    signal w_reg_center_x          : std_logic_vector (10 downto 0);
+    signal w_reg_center_y          : std_logic_vector (10 downto 0);
     -- LUT X Configure
-    signal w_reg_lut_x_wdata  : std_logic_vector (10 downto 0);
-    signal w_reg_lut_x_rdata  : std_logic_vector (10 downto 0);
+    signal w_reg_lut_x_wdata  : std_logic_vector (15 downto 0);
+    signal w_reg_lut_x_rdata  : std_logic_vector (15 downto 0);
     signal w_reg_lut_x_addr   : std_logic_vector (10 downto 0);
     signal w_reg_lut_x_enable : std_logic;
     signal w_reg_lut_x_wren   : std_logic;
@@ -113,11 +115,13 @@ architecture tb of tb_fpga is
             i_aclk             : in  std_logic;
             i_aresetn          : in  std_logic;
             -- Configure
-            i_enable_correction: in std_logic;
-            i_line_length      : in std_logic_vector (15 downto 0);
+            i_enable_correction : in std_logic;
+            i_line_length       : in std_logic_vector (15 downto 0);
+            i_center_x          : in std_logic_vector (10 downto 0);
+            i_center_y          : in std_logic_vector (10 downto 0);
             -- LUT X Configure
-            i_lut_theta_wdata  : in  std_logic_vector (10 downto 0);
-            o_lut_theta_rdata  : out std_logic_vector (10 downto 0);
+            i_lut_theta_wdata  : in  std_logic_vector (15 downto 0);
+            o_lut_theta_rdata  : out std_logic_vector (15 downto 0);
             i_lut_theta_addr   : in  std_logic_vector (10 downto 0);
             i_lut_theta_enable : in  std_logic;
             i_lut_theta_wren   : in  std_logic;
@@ -277,6 +281,8 @@ begin
         -- Configure
         i_enable_correction => w_reg_enable_correction,
         i_line_length       => w_reg_line_length,
+        i_center_x          => w_reg_center_x,
+        i_center_y          => w_reg_center_y,
         -- LUT X Configure
         i_lut_theta_wdata    => w_reg_lut_x_wdata,
         o_lut_theta_rdata    => w_reg_lut_x_rdata,

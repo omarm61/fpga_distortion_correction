@@ -1,4 +1,4 @@
 #add list -decimal *
-log * -r
+#log * -r
 do stim.do
 #write list counter.lst

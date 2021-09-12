@@ -51,6 +51,8 @@ mem load -infile image_in.mif -format hex -filltype value -filldata 1'b0 /tb_fpg
 # Configure module
 force w_reg_enable_correction 1
 force w_reg_line_length       16#146
+force w_reg_center_x          16#A5
+force w_reg_center_y          16#64
 
 # setup an oscillator on the CLK input
 force i_sim_clk 1 50 ns -r 100 ns

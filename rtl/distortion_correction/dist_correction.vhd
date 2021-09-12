@@ -15,11 +15,13 @@ entity dist_correction is
         i_aclk             : in  std_logic;
         i_aresetn          : in  std_logic;
         -- Configure
-        i_enable_correction: in std_logic;
-        i_line_length      : in std_logic_vector (15 downto 0);
+        i_enable_correction : in std_logic;
+        i_line_length       : in std_logic_vector (15 downto 0);
+        i_center_x          : in std_logic_vector (10 downto 0);
+        i_center_y          : in std_logic_vector (10 downto 0);
         -- LUT X Configure
-        i_lut_theta_wdata  : in  std_logic_vector (10 downto 0);
-        o_lut_theta_rdata  : out std_logic_vector (10 downto 0);
+        i_lut_theta_wdata  : in  std_logic_vector (15 downto 0);
+        o_lut_theta_rdata  : out std_logic_vector (15 downto 0);
         i_lut_theta_addr   : in  std_logic_vector (10 downto 0);
         i_lut_theta_enable : in  std_logic;
         i_lut_theta_wren   : in  std_logic;
@@ -87,9 +89,12 @@ architecture rtl of dist_correction is
             -- Clock/Reset
             i_aclk    : in std_logic;
             i_aresetn : in std_logic;
+            -- Configuration
+            i_center_x : in std_logic_vector (10 downto 0);
+            i_center_y : in std_logic_vector (10 downto 0);
             -- LUT Theta Configure
-            i_lut_theta_wdata      : in  std_logic_vector (10 downto 0);
-            o_lut_theta_rdata      : out std_logic_vector (10 downto 0);
+            i_lut_theta_wdata      : in  std_logic_vector (15 downto 0);
+            o_lut_theta_rdata      : out std_logic_vector (15 downto 0);
             i_lut_theta_addr       : in  std_logic_vector (10 downto 0);
             i_lut_theta_enable     : in  std_logic;
             i_lut_theta_wren       : in  std_logic;
@@ -267,6 +272,9 @@ begin
         -- Clock/Reset
         i_aclk      => i_aclk,
         i_aresetn   => i_aresetn,
+        -- Configuration
+        i_center_x  => i_center_x,
+        i_center_y  => i_center_y,
         -- LUT X Configure
         i_lut_theta_wdata   => i_lut_theta_wdata,
         o_lut_theta_rdata   => o_lut_theta_rdata,

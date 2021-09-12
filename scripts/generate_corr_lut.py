@@ -11,15 +11,14 @@ def print_help():
     print ("-h : Help message")
 
 def main(argv):
-    Rsrc = 212
     width = 326
     height = 200
-    centerx = width/2
-    centery = height/2
     strength = 1.7
     display = 0
+    file_out = "corr_lut.mif"
+    write_lut = 0
     try:
-        opts, args = getopt.getopt(argv, "hdw:l:s:", ["width=", "lines=", "strength="])
+        opts, args = getopt.getopt(argv, "hdw:l:s:o:", ["width=", "lines=", "strength=", "output="])
     except getopt.GetoptError:
         print_help()
         sys.exit(2)
@@ -34,38 +33,51 @@ def main(argv):
             height = int(arg)
         elif opt in ("-d", "--height"):
             display = 1
+        elif opt in ("-o", "--output"):
+            write_lut = 1
+            file_out = arg
         elif opt in ("-s", "--strength"):
             strength = float(arg)
 
+
+    # Open output file
+    if (write_lut):
+        fout = open(file_out, "w")
+
     rd = math.sqrt((width ** 2) + (height ** 2)) / strength
 
-    # Source Location
-    srcx = np.zeros(width)
-    srcy = np.zeros(height)
-
     # Create the vectors X and Y
-    dstx = np.array(range(width))
-    dsty = np.array(range(height))
-    for j in range(len(dsty)):
-        for i in range(len(dstx)):
-            newx = i - centerx
-            newy = j - centery
-            ru = math.sqrt((newx ** 2) + (newy ** 2))
-            rnorm = ru/rd
-            if (rnorm == 0.0):
-                theta = 1
-            else:
-                theta = (math.atan(rnorm) / rnorm)
-            # Calculate location in source image
-            srcx[i] = int(round(centerx + theta * newx))
-            srcy[j] = int(round(centery + theta * newy))
+    pos = np.array(range(2048))
+    newx = 0
+    newy = 0
+    for i in range(len(pos)):
+        if (newx == width/2):
+            if (newy != height/2):
+                newy = newy + 1
+        else:
+            newx = newx + 1
+        ru = math.sqrt((newx ** 2) + (newy ** 2))
+        rnorm = ru/rd
+        if (rnorm == 0.0):
+            theta = 1
+        else:
+            theta = (math.atan(rnorm) / rnorm)
+        # Calculate location in source image
+        lut_val = format(int(theta * 2 ** 15), '05x')
+        fout.write(lut_val)
+        fout.write("\n")
 
-    if (display):
-        # Create the plot
-        plt.plot(dstx[0:width-1],srcx[0:width-1], label = "columns")
-        plt.plot(dsty[0:height-1],srcy[0:height-1], label = "rows")
-        # Show the plot
-        plt.show()
+    # Close output file
+    fout.close
+
+
+
+    #if (display):
+    #    # Create the plot
+    #    plt.plot(dstx[0:width-1],srcx[0:width-1], label = "columns")
+    #    plt.plot(dsty[0:height-1],srcy[0:height-1], label = "rows")
+    #    # Show the plot
+    #    plt.show()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -57,45 +57,50 @@ endif
 
 ## setup: Copies xilinx simulation library and configure simulation directory
 setup : stim
-	cd $(SIM_DIR); \
+	@cd $(SIM_DIR); \
 	cp $(XILINX_LIB)/modelsim.ini .; \
 	vlib work; \
 	vmap work work
 
 ## compile: compiles the RTL code (NOTE: The files are recompiled before every simulation run)
 compile :
-	cd $(SIM_DIR); \
+	@cd $(SIM_DIR); \
 	vcom $(INCLUDE_RTL) $(INCLUDE_TB)
 
 ## sim: run simulation
 sim : compile
-	cd $(SIM_DIR); \
+	@cd $(SIM_DIR); \
 	vsim $(VSIM_OPT) tb_fpga
 
 ## waves: Open wave files
 waves :
-	cd $(SIM_DIR); \
+	@cd $(SIM_DIR); \
 	vsim -view output.wlf -do $(WAVE_OPT)
 
 ## stim: generate stimulus input video file
 stim :
-	cd $(SCRIPT_DIR); \
+	@cd $(SCRIPT_DIR); \
 	python3 generate_image_rom.py -i $(IMAGE_IN_JPEG) -o ../$(SIM_DIR)/$(IMAGE_IN_MIF)
 
 plot_lut :
-	cd $(SCRIPT_DIR); \
+	@cd $(SCRIPT_DIR); \
 	python3 plot_atan_lut.py
 
 ## conv: generate yuv file
 conv :
-	cd $(SIM_DIR); \
+	@cd $(SIM_DIR); \
 	rm video_out.yuv; \
 	cat ./video_out_sim.txt | tr -d "\n" >> ./video_out.yuv
 
 ## play: play the generated video
 play : conv
-	cd $(SIM_DIR); \
+	@cd $(SIM_DIR); \
 	ffplay -f rawvideo -pixel_format yuyv422  -video_size 326x199 video_out.yuv
+
+## play: play the generated video
+display : conv
+	@cd $(SCRIPT_DIR); \
+	python3 display_sim_image.py -a ../pictures/checkerboard_326x200.jpg -b ../sim/video_out.yuv -d
 
 ## clean: remove all generated files in /sim directory
 clean :
