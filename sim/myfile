@@ -1,4 +1,9 @@
 #add list -decimal *
-#log * -r
+if {$sim_log == 1} {
+    log * -r
+    puts "\n****LOG ENABLED****\n"
+} else {
+    puts "\n****LOG DISABLED****\n"
+}
 do stim.do
 #write list counter.lst

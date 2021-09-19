@@ -35,7 +35,9 @@ entity dist_correction is
     	m_axis_tvalid      : out std_logic;
     	m_axis_tready      : in  std_Logic;
     	m_axis_tuser_sof   : out std_Logic;
-    	m_axis_tlast       : out std_logic
+    	m_axis_tlast       : out std_logic;
+        -- Debug Signals
+        o_debug_line_counter     : out std_logic_vector (10 downto 0)
 );
 end dist_correction;
 
@@ -148,6 +150,8 @@ begin
     m_axis_tlast     <= r_axis_tlast;
     m_axis_tuser_sof <= r_axis_tuser_sof;
 
+    -- Debug
+    o_debug_line_counter <= r_pixel_counter_y;
 
     w_dst_pos_tdata <= r_pixel_counter_y & r_pixel_counter_x;
     -- HACK: This is only a counter

@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use IEEE.std_logic_unsigned.ALL;
 use ieee.numeric_std.all;
 
 library unimacro;
@@ -274,11 +275,12 @@ begin
         USE_SIMD => "TWO24" )	-- SIMD selection ("ONE48", "TWO24", "FOUR12")
     port map (
         CLK     => i_aclk,         -- 1-bit input: Clock input
-        A       => w_dsp_s1_a,	   -- S1_0, S1_2[5:0]
-        B       => w_dsp_s1_b,	   -- S1_2[11:6]
-        C       => r_dsp_s1_c,	   -- S1_1, S1_3
+        A       => w_dsp_s1_a,	   --
+        B       => w_dsp_s1_b,	   --
+        C       => r_dsp_s1_c,	   --
         ALUMODE => "0001",		   -- 4-bit input: ALU control input
         OPMODE  => "0110011",	   -- 7-bit input: Operation mode input
+	    CARRYIN => '1',            -- 1-bit input: Carry input signal
         CEP     => rs_axis_tvalid_shift(0),	   -- 1-bit input: CE input for PREG
         -- Reset Signals
         RSTA          => w_dsp_reset,

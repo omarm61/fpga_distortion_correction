@@ -24,8 +24,14 @@ INCLUDE_TB= ../tb/image_rom.vhd \
 # Xilinx compiled lib directory
 XILINX_LIB=~/workspace/compile_simlib
 
+ifeq ($(LOG), )
+	LOG=0
+endif
+
 # Modelsim options
-VSIM_OPT = -do myfile \
+VSIM_OPT = -onfinish stop \
+		   -do "set sim_log $(LOG)"\
+		   -do myfile \
 		   -wlf output.wlf
 
 # Waveform Configuration

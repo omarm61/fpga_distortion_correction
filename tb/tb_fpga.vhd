@@ -1,8 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use std.textio.all;
 use ieee.std_logic_textio.all;
+use std.textio.all;
 
 entity tb_fpga is
     port (
@@ -28,8 +28,6 @@ architecture tb of tb_fpga is
     constant C_VIDEO_OUT_FILE : string := "video_out_sim.txt";
 
     -- Signals
-    signal enable : std_logic;
-
     -- AXI-Stream
 
     -- Distortion correction -> SIM Output File
@@ -79,6 +77,9 @@ architecture tb of tb_fpga is
     signal w_mem_addr  : std_logic_vector (15 downto 0);
     signal w_mem_rden  : std_logic;
     signal w_mem_valid : std_logic;
+
+    -- Debug
+    signal w_debug_line_counter : std_logic_vector (10 downto 0);
 
     -- Function: Convert CHAR to STD_LOGIC_VECTOR
     function conv_char_to_logic_vector(char0 : character; char1 : character)
@@ -135,7 +136,9 @@ architecture tb of tb_fpga is
             m_axis_tvalid      : out std_logic;
             m_axis_tready      : in  std_Logic;
             m_axis_tuser_sof   : out std_Logic;
-            m_axis_tlast       : out std_logic
+            m_axis_tlast       : out std_logic;
+            -- Debug
+            o_debug_line_counter     : out std_logic_vector (10 downto 0)
         );
     end component;
 
@@ -194,17 +197,6 @@ architecture tb of tb_fpga is
     end component;
 
 begin
-
-    tb1 : process
-    begin
-        enable <= '0';
-        -- Enable Counter
-        wait for 400 ns;
-        enable <= '1';
-
-        -- Wait for simulation to end
-        wait;
-    end process;
 
 
     ------------------------------------------
@@ -299,8 +291,9 @@ begin
         m_axis_tvalid    => w_axis_dist_sim_tvalid,
         m_axis_tready    => r_axis_dist_sim_tready,
         m_axis_tuser_sof => w_axis_dist_sim_tuser_sof,
-        m_axis_tlast     => w_axis_dist_sim_tlast
+        m_axis_tlast     => w_axis_dist_sim_tlast,
+        -- Debug
+        o_debug_line_counter   => w_debug_line_counter
     );
-
 
 end tb;

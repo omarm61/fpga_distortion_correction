@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use IEEE.std_logic_unsigned.ALL;
 use ieee.numeric_std.all;
 
 entity calc_pixel_address is
