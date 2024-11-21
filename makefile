@@ -22,7 +22,7 @@ INCLUDE_TB= ../tb/image_rom.vhd \
 			../tb/tb_fpga.vhd
 
 # Xilinx compiled lib directory
-XILINX_LIB=~/workspace/compile_simlib
+XILINX_LIB=/opt/xilinx_sim_lib/
 
 ifeq ($(LOG), )
 	LOG=0
